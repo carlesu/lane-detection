@@ -39,17 +39,16 @@ def nieto_filter_matrix(image_in, tau):
     :return:
     """
     image = np.copy(image_in)
-    row, col = image.shape
+    row, col = image_in.shape
     image = image.astype('int16')
     last_col = col - tau
-    first = 2 * image
-    left_matrix = np.zeros((row, col), 'int16')
+
+    left_matrix = np.zeros_like(image)   # Pre-allocate left operand
+    right_matrix = np.zeros_like(image)  # Pre-allocate right operand
     left_matrix[:, [range(tau, col)]] = image[:, [range(last_col)]]
-    right_matrix = np.zeros((row, col), 'int16')
     right_matrix[:, [range(last_col)]] = image[:, [range(tau, col)]]
-    second = left_matrix + right_matrix
-    third = abs(left_matrix - right_matrix)
-    nieto_image = first - second - third
+
+    nieto_image = (2 * image) - (left_matrix + right_matrix) - abs(left_matrix - right_matrix)
     nieto_image[nieto_image < 0] = 0
     nieto_image[nieto_image > 255] = 255
     nieto_image = nieto_image.astype('uint8')
@@ -88,4 +87,34 @@ def nieto_filter_loop(image_in, tau):
             row[j] = aux
         nieto_image = np.vstack([nieto_image, row])
     nieto_image = nieto_image.astype('uint8')
+    return nieto_image
+
+
+def nieto_filter_loop_veridic(image_in, tau):
+    """
+    Original implementation from:
+    :param image:
+    :param tau:
+    :return:
+    """
+    image = np.copy(image_in)
+    row, col = image.shape
+    image = image.astype('int16')
+
+    nieto_image = np.zeros((row, col), 'int16')
+    for j in range(row):
+        in_row = image[j]
+        for i in range(tau, col - tau):
+            if in_row[i] != 0:
+                aux = 2 * in_row[i]
+                aux += -in_row[i-tau]
+                aux += -in_row[i+tau]
+                aux += -abs(in_row[i-tau] - in_row[i+tau])
+                if aux < 0:
+                    aux = 0
+                elif aux > 255:
+                    aux = 255
+                nieto_image[j][i] = aux
+    nieto_image = nieto_image.astype('uint8')
+
     return nieto_image

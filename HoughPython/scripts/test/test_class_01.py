@@ -14,6 +14,6 @@ while 1:
     my_frame.crop()
     my_frame.gray()
     my_frame.nieto(tau=50)
-    my_frame.canny()
+    # my_frame.canny()
     print("--- %s seconds ---" % (time.time() - start_time))
-    # my_frame.show_processed()
+    my_frame.show_processed()

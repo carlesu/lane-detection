@@ -20,7 +20,9 @@ class Frame:
         self.processed = cv2.cvtColor(self.processed, cv2.COLOR_BGR2GRAY)
 
     def nieto(self, tau=50):
-        self.processed = image_utils.nieto_filter_matrix(self.processed, tau)
+        self.processed = image_utils.nieto_filter_matrix(self.processed, tau)          # 0.016051530838012695 seconds
+        # self.processed = image_utils.nieto_filter_loop(self.processed, tau)          # 2.445992946624756 seconds
+        # self.processed = image_utils.nieto_filter_loop_veridic(self.processed, tau)  # 3.149050235748291 seconds
 
     def canny(self, low_threshold=200, high_threshold=300):
         self.processed = cv2.Canny(self.processed, low_threshold, high_threshold)
