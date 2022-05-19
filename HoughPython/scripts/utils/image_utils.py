@@ -2,7 +2,8 @@ import numpy as np
 import cv2
 
 
-def normalize_gray(image):
+def normalize_gray(image_in):
+    image = np.copy(image_in)
     min_value = image.min()
     max_value = image.max()
     row, col = image.shape
@@ -30,22 +31,22 @@ def color_selection(image, red_threshold, green_threshold, blue_threshold):
     return color_select
 
 
-def nieto_filter_matrix(image, tau):
+def nieto_filter_matrix(image_in, tau):
     """
     Optimized implementation with numpy arrays.
     :param image:
     :param tau:
     :return:
     """
+    image = np.copy(image_in)
     row, col = image.shape
-    image_in = image.copy()
-    image_in = image_in.astype('int16')
+    image = image.astype('int16')
     last_col = col - tau
-    first = 2 * image_in
+    first = 2 * image
     left_matrix = np.zeros((row, col), 'int16')
-    left_matrix[:, [range(tau, col)]] = image_in[:, [range(last_col)]]
+    left_matrix[:, [range(tau, col)]] = image[:, [range(last_col)]]
     right_matrix = np.zeros((row, col), 'int16')
-    right_matrix[:, [range(last_col)]] = image_in[:, [range(tau, col)]]
+    right_matrix[:, [range(last_col)]] = image[:, [range(tau, col)]]
     second = left_matrix + right_matrix
     third = abs(left_matrix - right_matrix)
     nieto_image = first - second - third
@@ -55,16 +56,16 @@ def nieto_filter_matrix(image, tau):
     return nieto_image
 
 
-def nieto_filter_loop(image, tau):
+def nieto_filter_loop(image_in, tau):
     """
     Original implementation from:
     :param image:
     :param tau:
     :return:
     """
+    image = np.copy(image_in)
     row, col = image.shape
-    image_in = image.copy()
-    image_in = image_in.astype('int16')
+    image = image.astype('int16')
     last_col = col - tau
     nieto_image = np.empty((0, col), 'int16')
     for i in range(row):
@@ -72,14 +73,14 @@ def nieto_filter_loop(image, tau):
         for j in range(col):
             if j < tau:
                 left_side = 0
-                right_side = image_in[i][j + tau]
+                right_side = image[i][j + tau]
             elif (j + tau + 1) > col:
                 right_side = 0
-                left_side = image_in[i][j - tau]
+                left_side = image[i][j - tau]
             else:
-                right_side = image_in[i][j + tau]
-                left_side = image_in[i][j - tau]
-            aux = 2 * image_in[i][j] - (left_side + right_side) - abs(left_side - right_side)
+                right_side = image[i][j + tau]
+                left_side = image[i][j - tau]
+            aux = 2 * image[i][j] - (left_side + right_side) - abs(left_side - right_side)
             if aux < 0:
                 aux = 0
             elif aux > 255:
