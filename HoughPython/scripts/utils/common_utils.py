@@ -9,9 +9,13 @@ def get_single_file(file_type=None):
     root = tkinter.Tk()
     if file_type != None:
         string_disp = 'Choose a ' + file_type + ' file'
+        file_extension = file_type
+        extension_str = "*." + file_extension
+        file = tkinter.filedialog.askopenfilename(parent=root, title=string_disp,
+                                                  filetypes=((file_type, extension_str), ("all files", "*.*")))
     else:
         string_disp = 'Choose a file'
-    file = tkinter.filedialog.askopenfilename(parent=root, title=string_disp)
+        file = tkinter.filedialog.askopenfilename(parent=root, title=string_disp)
     root.withdraw()
     return file
 

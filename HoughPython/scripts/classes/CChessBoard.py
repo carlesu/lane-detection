@@ -41,8 +41,10 @@ class ChessBoard:
         Generate 2D points (camera coordinate frame)
         :return:
         """
+        print('ProcessingChessboard')  # TODO: Use loggger
         self.find_corners()       # 2D Points
         self.get_object_points()  # 3D points
+        print('Processed')  # TODO: Use loggger
 
     def find_corners(self):
         """
