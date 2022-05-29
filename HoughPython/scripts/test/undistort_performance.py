@@ -4,7 +4,7 @@ import scripts.utils.common_utils as common_utils
 
 
 image_in = r"F:\CAVRide_LaneDetection\Exchange\camera_calibration\Calibration_09.bmp"
-carlibration_file = r'./../../data/calibration_data.pkl'
+carlibration_file = r'../../data/calibrations/calibration_data.pkl'
 calibration_data = common_utils.load_pickle(carlibration_file)
 
 cameraMatrix = calibration_data['camera_matrix']

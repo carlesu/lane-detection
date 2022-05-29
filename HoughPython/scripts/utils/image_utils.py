@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-from scripts.classes.CChessBoard import ChessBoard
 
 
 def normalize_gray(image_in: np.ndarray) -> np.ndarray:
@@ -125,55 +124,4 @@ def nieto_filter_loop_2(image_in: np.ndarray, tau: int) -> np.ndarray:
     nieto_image = nieto_image.astype('uint8')
 
     return nieto_image
-
-
-def get_camera_calibration_matrix(chessboard_images: list, chessboard_dim: tuple) -> tuple[dict, list]:
-    """
-    All chessboard rows/cols shall be the same.
-    All image dimensions shall be the same.
-    :param chessboard_images:
-    :param chessboard_dim:
-    :return:
-    """
-    '''
-    Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
-    objectPoints: It is a vector of vectors of calibration pattern points in the calibration pattern coordinate space
-    imagePoints: It is a vector of vectors of the projections of calibration pattern point
-    imageSize: Size of the image used only to initialize the camera intrinsic matrix.
-    ---
-    retval: The overall RMS re-projection error.
-    cameraMatrix: Input/output 3x3 floating-point camera intrinsic matrix
-    distCoeffs: Input/output vector of distortion coefficients 
-    rvecs: Output vector of rotation vectors (Rodrigues) estimated for each pattern view.
-    tvecs: Output vector of translation vectors estimated for each pattern view
-    '''
-    nx, ny = chessboard_dim
-    objectPoints = []  # Store vectors of 3D points for all chessboard images (world coordinate frame)
-    imagePoints = []   # Store vectors of 2D points for all chessboard images (camera coordinate frame)
-    imageSize = (0, 0)
-    chessboards = []
-    for idx, ChBo_img in enumerate(chessboard_images):
-        cur_ChessBoard = ChessBoard(nx=nx, ny=ny)
-        if isinstance(ChBo_img, str):
-            cur_ChessBoard.load_image(image_path=ChBo_img)
-        elif isinstance(ChBo_img, np.ndarray):
-            cur_ChessBoard.load_image(image_array=ChBo_img)
-        else:
-            print('Current ChessBoard image type not valid: {0}. Skipping...')
-            continue
-        chessboards.append(cur_ChessBoard)
-        if not idx:
-            imageSize = cur_ChessBoard.dimensions
-        cur_ChessBoard.calibrate()
-        if cur_ChessBoard.has_corners:
-            objectPoints.append(cur_ChessBoard.object_points)
-            imagePoints.append(cur_ChessBoard.corners)
-    if not len(objectPoints):
-        # For some reason the
-        return dict(), chessboards
-    # Get the camera intrinsic matrix and distortion vector.
-    retval, cameraMatrix, distCoeffs, rvecs, tvecs = cv2.calibrateCamera(objectPoints, imagePoints,
-                                                                         imageSize, None, None)
-    calibration_data = dict(camera_matrix=cameraMatrix, distortion_coefficient=distCoeffs)
-    return calibration_data, chessboards
 

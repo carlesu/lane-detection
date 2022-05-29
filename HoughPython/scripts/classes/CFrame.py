@@ -1,40 +1,39 @@
 import cv2
 import numpy as np
 
-import scripts.utils.image_utils as image_utils
-
 
 class Frame:
-    cls_warp_matrix = None
-    cls_inv_warp_matrix = None
-    cls_cameraMatrix = None
-    cls_distCoeffs = None
-    cls_distMap1 = None
-    cls_distMap2 = None
-
-    def __init__(self, warp_matrix=None, inv_warp_matrix=None):
-        self.original = None   # BGR
-        self.processed = None  # BGR
-        # Calibration Data
-        self.cameraMatrix, self.distCoeffs = None, None
-        # BEV data
-        self.warp_matrix, self.inv_warp_matrix = None, None
+    def __init__(self, logger):
+        self.logger = logger
+        self.original, self.processed = None, None  # BGR
         # Shape
-        self.row, self.col = None, None
+        self.row, self.col, self.ch = None, None, None
+        self.shape, self.inv_shape = None, None
+        # Calibration
+        self.camera_matrix, self.dist_coeffs = None, None
+        # Distortion
+        self.distMap1, self.distMap2 = None, None
+
+    def load_dimensions(self, row, col, ch):
+        self.row = row
+        self.col = col
+        self.ch = ch
+        self.shape = (self.row, self.col)
+        self.inv_shape = (self.col, self.row)
+
+    def load_calibration(self, camera_matrix, dist_coeffs):
+        self.camera_matrix = camera_matrix
+        self.dist_coeffs = dist_coeffs
 
     def load_image(self, image_array):
-        self.original = image_array.copy()
-        self.row, self.col, _ = self.original.shape
-        self.processed = image_array.copy()
+        self.original = image_array
+        self.processed = self.original.copy()
 
-    def load_calibration(self, cameraMatrix, distCoeffs):
-        self.cameraMatrix = cameraMatrix
-        self.distCoeffs = distCoeffs
-
-    def crop(self, top_margin=350, bottom_margin=127, left_margin=0, right_margin=0):
-        row = self.processed.shape[0]
-        col = self.processed.shape[1]
-        self.processed = self.processed[top_margin:(row-bottom_margin), left_margin:(col-right_margin)]  # Crop image
+    def init_undistort_rectify_map(self):
+        siz = self.inv_shape  # siz Undistorted image size [w,h].
+        R = None
+        self.distMap1, self.distMap2 = cv2.initUndistortRectifyMap(self.camera_matrix, self.dist_coeffs, R,
+                                                                   self.camera_matrix, siz, cv2.CV_32FC1)
 
     def gray(self):
         self.processed = cv2.cvtColor(self.processed, cv2.COLOR_BGR2GRAY)
@@ -42,43 +41,23 @@ class Frame:
     def threshold(self):
         thresh, self.processed = cv2.threshold(self.processed, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    def nieto(self, tau=50):
-        self.processed = image_utils.nieto_filter_matrix(self.processed, tau)          # 0.016051530838012695 seconds
-        # self.processed = image_utils.nieto_filter_loop(self.processed, tau)          # 2.445992946624756 seconds
-        # self.processed = image_utils.nieto_filter_loop_veridic(self.processed, tau)  # 3.149050235748291 seconds
+    def undistort_full(self):
+        """
+        The function is simply a combination of initUndistortRectifyMap (with unity R ) and remap
+        (with bilinear interpolation).
+        :return:
+        """
+        self.processed = cv2.undistort(self.processed, self.camera_matrix, self.dist_coeffs, None, self.camera_matrix)
 
-    def canny(self, low_threshold=200, high_threshold=300):
-        self.processed = cv2.Canny(self.processed, low_threshold, high_threshold)
-
-    def undistort(self):
+    def undistort_fast(self):
         """
         The function is simply a combination of initUndistortRectifyMap (with unity R ) and remap
         (with bilinear interpolation).
         If we want performance, we shall only run initUndistortRectifyMap once and then use the remap.
+        * Computation increases from 0.06 to 0.011 seconds
         :return: 
         """
-        if (self.cls_distMap1 is None) or (self.cls_distMap2 is None):
-
-
-            print('Computing the undistortion and rectification transformation map.')  # TODO: Use logger
-            R = None
-            self.cls_distMap1, self.cls_distMap2 = cv2.initUndistortRectifyMap(self.cls_cameraMatrix,
-                                                                               self.cls_distCoeffs,
-                                                                               R,
-                                                                               self.cls_cameraMatrix,
-                                                                               self.processed.shape[0:2][::-1],
-                                                                               cv2.CV_32FC1)
-        print(self.processed.shape)
-        self.processed = cv2.remap(self.processed, self.cls_distMap1, self.cls_distMap2, cv2.INTER_LINEAR)
-        print(self.processed.shape)
-        # self.processed = cv2.undistort(self.processed, self.cls_cameraMatrix, self.cls_distCoeffs, None, self.cls_cameraMatrix)
-        # self.processed = cv2.undistort(self.processed, self.cameraMatrix, self.distCoeffs, None, self.cameraMatrix)
-
-    def BEV(self, src_points: np.ndarray, dest_points: np.ndarray):
-        self.warp_matrix = cv2.getPerspectiveTransform(src_points, dest_points)
-        # shape = self.processed.shape
-        shape = self.processed.shape[::-1]  # We invert the shape for some reason
-        self.processed = cv2.warpPerspective(self.processed, self.warp_matrix, shape, flags=cv2.INTER_LINEAR)
+        self.processed = cv2.remap(self.processed, self.distMap1, self.distMap2, cv2.INTER_LINEAR)
 
     def show_processed(self, name='Processed', wait=0):
         cv2.imshow(name, self.processed)
@@ -88,3 +67,6 @@ class Frame:
         cv2.imshow(name, self.processed)
         cv2.waitKey(int(wait))
 
+    def cleanup_data(self):
+        self.original = np.empty(shape=self.shape + (3, ), dtype=np.uint8)
+        self.processed = np.empty(shape=self.shape + (3, ), dtype=np.uint8)

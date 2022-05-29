@@ -1,13 +1,27 @@
 import scripts.utils.image_utils as image_utils
 import scripts.utils.common_utils as common_utils
-from scripts.classes.CChessBoard import ChessBoard
+from scripts.classes.CChessboardCalibration import CChessboardCalibration
 import cv2
 
+
+logger = common_utils.create_logger()
 calib_images = common_utils.get_multiple_files()
 
-calibration_data, chessboards = image_utils.get_camera_calibration_matrix(chessboard_images=calib_images,
-                                                                          chessboard_dim=(8, 5))
+# Create the calibrator
+chessboard_calibrator = CChessboardCalibration(logger=logger)
+# Load the calibration images
+# chessboard_dim = (N of inner chessboard squares along the x-axis, N of inner chessboard squares along the y-axis)
+chessboard_calibrator.load_images(chessboard_images=calib_images, chessboard_dim=(7, 4))
+# Build all chessboards infos
+chessboard_calibrator.build_chessboards()
+# Calibrate using all the Chessboards
+chessboard_calibrator.calibrate()
+# Get the data
+calibration_data = chessboard_calibrator.get_calibration_data()
+chessboards = chessboard_calibrator.get_chessboards()
 
+
+# Testing plots
 for chessboard in chessboards:
     if chessboard.has_corners:
         cv2.imshow("corners", chessboard.get_image_with_corners())

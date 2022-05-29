@@ -3,6 +3,7 @@ import tkinter.filedialog
 import pickle
 import datetime
 import os
+import logging
 
 
 def get_single_file(file_type=None):
@@ -109,3 +110,22 @@ def df_to_log(df):
 def true_copy(var_obj):
     out_var = pickle.loads(pickle.dumps(var_obj))
     return out_var
+
+
+def create_logger(log_file=None, rank=0, log_level=logging.INFO):
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_level if rank == 0 else 'ERROR')
+    # old = '%(asctime)s  %(levelname)5s  %(message)s'
+    logger_format = '%(asctime)s - [%(levelname)s]: {%(module)s - %(funcName)s} -> %(message)s'
+    formatter = logging.Formatter(logger_format)
+    console = logging.StreamHandler()
+    console.setLevel(log_level if rank == 0 else 'ERROR')
+    console.setFormatter(formatter)
+    logger.addHandler(console)
+    if log_file is not None:
+        file_handler = logging.FileHandler(filename=log_file)
+        file_handler.setLevel(log_level if rank == 0 else 'ERROR')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    logger.propagate = False
+    return logger
